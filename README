@@ -1,0 +1,19 @@
+This module is being developed as an Google Summer of Code '12 Project
+for Fedora Insight.
+Use Cases: //fedoraproject.org/wiki/Insight_use_cases_for_status_and_microblogging
+
+The module specifies a block 'Insight Publish' to enable users to post authenticated
+status messages on Insight Website and also promote them to be added to Fedora's feed
+at Identi.ca.
+Users with access permission 'Post as Fedora' can directly post it to Identi.ca while
+others can only add their message to the moderation queue to be approve or rejected by
+a user with aforementioned permission.
+N.B. This module only provides the backend for posting to an external service
+(integration is still under development)
+
+function insight_publish_apt_place_to_post()
+-specifies where the 'Insight Publish' box should be displayed
+ currently it is set to display the block only on the front page
+
+http://www.example.com/?q=identica
+shows the current moderation queue and previously posted and rejected messages
