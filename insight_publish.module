@@ -57,6 +57,9 @@ function insight_publish_menu() {
   return $items;
 }
 
+/**
+ * Form builder for approving/rejecting Identi.ca requests
+ */
 function insight_publish_identica_approval_form($form, &$form_state, $val) {
   $form = array(
     'insight_queue_ipid' => array(
@@ -81,8 +84,11 @@ function insight_publish_identica_approval_form($form, &$form_state, $val) {
   );
   return $form;
 }
-function insight_identica_requested_posts()
-{
+
+/**
+ * Page callback for getting identica/queue
+ */
+function insight_identica_requested_posts() {
   $query = db_select('insight_feed', 'i')->condition('published', 0)->orderBy('requestedat', 'desc');
   $intermediate = $query->fields('i');
   $maxCount = $intermediate->countQuery()->execute()->fetchField();
@@ -101,7 +107,7 @@ function insight_identica_requested_posts()
     );
   }
 
-  if(!isset($items))
+  if (!isset($items))
     return '';
 
   $output = theme('item_list', array('items' => $items));
@@ -110,15 +116,18 @@ function insight_identica_requested_posts()
 }
 
 function insight_publish_approve_status($form, &$form_state) {
-  if(isset($form_state['values']['insight_queue_ipid']))
+  if (isset($form_state['values']['insight_queue_ipid']))
     insight_publish_post_Identica($form_state['values']['insight_queue_ipid']);
 }
 
 function insight_publish_reject_status($form, &$form_state) {
-  if(isset($form_state['values']['insight_queue_ipid']))
+  if (isset($form_state['values']['insight_queue_ipid']))
     insight_publish_reject_Identica($form_state['values']['insight_queue_ipid']);
 }
 
+/**
+ * Page callback for getting identica/approved
+ */
 function insight_identica_approved_posts() {
   $query = db_select('insight_feed', 'i')->condition('published', 1)->orderBy('moderatedat', 'desc');
   $intermediate = $query->fields('i');
@@ -150,7 +159,7 @@ function insight_identica_approved_posts() {
     );
   }
   
-  if(!isset($items))
+  if (!isset($items))
     return '';
 
   $output = theme('item_list', array('items' => $items));
@@ -158,6 +167,9 @@ function insight_identica_approved_posts() {
   return $output;
 }
 
+/**
+ * Page callback for getting identica/rejected
+ */
 function insight_identica_rejected_posts() {
   $query = db_select('insight_feed', 'i')->condition('published', 2)->orderBy('moderatedat', 'desc');
   $intermediate = $query->fields('i');
@@ -188,7 +200,7 @@ function insight_identica_rejected_posts() {
     'data' => drupal_render($form),
     );
   }
-  if(!isset($items))
+  if (!isset($items))
     return '';
 
   $output = theme('item_list', array('items' => $items));
@@ -199,9 +211,11 @@ function insight_identica_rejected_posts() {
 /*
  * Function to specify where to show
  * publish box
+ *
+ * @return TRUE if block should be visible on this page
  */
 function insight_publish_apt_place_to_post() {
-  if(drupal_is_front_page())
+  if (drupal_is_front_page())
     return TRUE;
   return FALSE;
 }
@@ -224,7 +238,7 @@ function insight_publish_theme_registry_alter(&$theme_registry) {
  * Helper function for re-ordering arrays (needed by theme_registry_alter)
 */
 function _insight_publish_insert_after_first_element(&$a, $element) {
-  if(is_array($a)) {
+  if (is_array($a)) {
     $first_element = array_shift($a);
     array_unshift($a, $first_element, $element);
   }
@@ -297,8 +311,8 @@ function insight_publish_form($form, &$form_state) {
  * Implement form_id_form_validate()
  */
 function insight_publish_form_validate($form, &$form_state) {
-  if($form_state['values']['insight_publish_twitter'] == 1) {
-    if(strlen($form_state['values']['insight_publish_textfield']) > 140)
+  if ($form_state['values']['insight_publish_twitter'] == 1) {
+    if (strlen($form_state['values']['insight_publish_textfield']) > 140)
       form_set_error('insight_publish_textfield', t('Upto 140 characters allowed in Twitter Feeds'));
       return;
   }
@@ -309,7 +323,9 @@ function insight_publish_form_validate($form, &$form_state) {
 function insight_publish_form_submit($form, &$form_state) {
   global $user;
   $body = $form_state['values']['insight_publish_textfield'];
-  insight_publish_request_Identica($body, $user);
+  if ($form_state['values']['insight_publish_twitter'] == 1) {
+    insight_publish_request_Identica($body, $user);
+  }
   $pieces = explode(" ", $body, 5);
   $title = implode(" ", array_splice($pieces, 0, 4));
   if ($title != $body)
@@ -323,7 +339,7 @@ function insight_publish_form_submit($form, &$form_state) {
   
   //add tags
   $terms = get_tags_with_tid($body);
-  foreach($terms as $tid)
+  foreach ($terms as $tid)
     $node->field_tags[$node->language][]['tid'] = $tid;
         
   //body field with link tags
@@ -347,7 +363,7 @@ function insight_publish_form_submit($form, &$form_state) {
 function get_tags_with_tid($text) {
   $hashtags = get_hashtags_from_text($text);
   $tid = array();
-  foreach($hashtags as $term){
+  foreach ($hashtags as $term) {
     $tid[$term] = get_tid_from_name($term);
   }
   return $tid;
@@ -364,8 +380,8 @@ function get_hashtags_from_text($text) {
   $result = array();
   preg_match_all($pattern, $text, $tags_list);   
   if (!empty($tags_list)) {
-    foreach($tags_list[0] as $tag)
-      $tag_list[] = substr($tag,1);
+    foreach ($tags_list[0] as $tag)
+      $tag_list[] = substr($tag, 1);
     $result = array_unique($tag_list);
   }
   return $result;
@@ -427,7 +443,7 @@ function hashtags_node_transform_to_links($text, $terms) {
     if (strstr($text, $word)) {    
       $word = '#' . $word;
       //$link = '<a class="link_tags" href="taxonomy/term/{$tid}">#'.$word.'</a>';
-      $link = l($word, "taxonomy/term/".$tid, array('attributes' => array('class' => 'hashtag')));
+      $link = l($word, "taxonomy/term/" . $tid, array('attributes' => array('class' => 'hashtag')));
       $pattern = "/$word\b/";      
       $text = preg_replace($pattern, $link, $text);      
     }
@@ -449,23 +465,23 @@ function insight_publish_request_Identica($text, $user) {
   if (!$user)
     global $user;
   if (strlen($text) > 140) {
-    drupal_set_message("Identi.ca/Twitter Statuses cannot be more than 140 characters in length", "error");
+    drupal_set_message(t("Identi.ca/Twitter Statuses cannot be more than 140 characters in length"), "error");
     return NULL;
   }
   $result = db_insert('insight_feed')
     ->fields(array(
-      'status' => $text,
+      'status' => check_plain($text),
       'requestedBy' => $user->name,
       'requestedAt' => REQUEST_TIME,
       'published' => 0,
     ))
     ->execute();
   watchdog('insight_module', 'New post to Twitter/Identi.ca request created. IPID: %var', array('%var' => $result)); 
-  if(!$result) {
-    drupal_set_message("Message could not be posted", "error");
+  if (!$result) {
+    drupal_set_message(t("Message could not be posted"), "error");
     return NULL;
   }  
-  drupal_set_message("Message added to moderation queue");
+  drupal_set_message(t("Message added to moderation queue"));
   if (user_access('post as fedora')) {
     insight_publish_post_Identica($result);
   }
@@ -492,7 +508,7 @@ function insight_publish_post_Identica($ipid) {
     /* Placeholder for posting to Identi.ca as admin 
     $res = callToFunction($r->status) */
     $res = TRUE;
-    if($res) {
+    if ($res) {
       db_update('insight_feed')
       ->fields(array(
       'published' => 1,
@@ -501,10 +517,10 @@ function insight_publish_post_Identica($ipid) {
       ))
       ->condition('ipid', $r->ipid, '=')
       ->execute();
-      drupal_set_message("Message Successfully posted to Twitter");
+      drupal_set_message(t("Message Successfully posted to Twitter"));
     }
     else
-      drupal_set_message("Message could not posted to Twitter", "error");
+      drupal_set_message(t("Message could not posted to Twitter"), "error");
   return $res;
   }
   return FALSE;
@@ -530,8 +546,8 @@ function insight_publish_reject_Identica($ipid) {
       ))
       ->condition('ipid', $ipid, '=')
       ->execute();
-  if($result) {
-    drupal_set_message("Message removed from moderation queue");
+  if ($result) {
+    drupal_set_message(t("Message removed from moderation queue"));
     return TRUE;
   }
   return FALSE;
