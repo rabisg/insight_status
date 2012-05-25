@@ -1,0 +1,78 @@
+<?php
+/**
+ * @file
+ * Database schema for insight_publish
+ * Install, update, and uninstall functions for the insight_publish module.
+ */
+
+/**
+ *Implements hook_schema()
+ */
+function insight_publish_schema() {
+  $schema['insight_feed'] = array(
+    'description' => "Storage for Insight Identi.ca feeds",
+    'fields' => array(
+      'ipid' => array(
+        'description' => 'Unique id for each Identi.ca post.',
+        'type' => 'serial',
+        'length' => 11,
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'The status message to be posted.',
+        'type' => 'varchar',
+        'length' => 140,
+        'not null' => TRUE,
+      ),
+      'requestedby' => array(
+        'description' => 'The username of the person who forwaded the message.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'moderatedby' => array(
+        'description' => 'The username of the admin who posted/rejected the message.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'requestedat' => array(
+        'description' => 'The timestamp of request.',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+      ),
+      'moderatedat' => array(
+        'description' => 'The timestamp of moderation.',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'published' => array(
+        'description' => 'Flag indicating whether this message is in moderation queue/published/rejected as 0/1/2',
+        'type' => 'int',
+        'length' => 2,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('ipid'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function insight_publish_install() {
+  variable_set('insight_publish_num_per_page', 50);
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function insight_publish_uninstall() {
+  variable_del('insight_publish_num_per_page');
+}
+
