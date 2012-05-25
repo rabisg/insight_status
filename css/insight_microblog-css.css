@@ -1,0 +1,36 @@
+.node-insight-microblog .node-content .field-name-body a {
+  background-color: #e0e0e0;
+}
+.node-insight-microblog .node-content .field-name-body  a:hover {
+  font-size: 1.1em;
+}
+.node-insight-microblog .user-picture img{
+  height: 50px;
+  width: 50px;
+}
+.node-insight-microblog .user-picture {
+  float: left;
+  padding-right: 10px;
+}
+
+.node-insight-microblog .node-content {
+  width:550px;
+  float:left;
+}
+.node-insight-microblog .node-header{
+  font-size: 14px;
+  text-transform: capitalize;
+  font-family: Georgia,"Times New Roman",Times,serif;
+  font-weight: bold;
+  color: #808080;
+}
+.node-insight-microblog .node-body {
+  padding-top: 5px;
+  font-size: 13px;
+}
+.node-insight-microblog .view-content {
+  margin-top: 10px;
+}
+.node-insight-microblog div.link-wrapper {
+  padding-top: 3px;
+}

@@ -1,0 +1,538 @@
+<?php
+/**
+ * @file
+ * Code for the Insight Publish feature.
+ */
+
+include_once 'insight_publish.features.inc';
+define('CAN_PUBLISH_CONTENT', 1);
+
+//defines Vocabulary ID for tags vocabulary
+define('VOCABULARY_ID', 1);
+
+/**
+ * Implementation of hook_permission() . 
+ */
+function insight_publish_permission() {
+  return array(
+    'post as fedora' => array(
+      'title' => t('Administration permission for Moderation Queue'), 
+      'description' => t('Permission to approve posts in the moderation queue'),
+    ),
+  );
+}
+
+/**
+  *Implements hook_menu
+  */
+function insight_publish_menu() {
+  $items['identica'] = array(
+    'title' => 'Identi.ca Posts',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'insight_identica_requested_posts',
+    'access callback' => 'user_access',
+    'access arguments' => array('post as fedora')
+  );
+  $items['identica/queue'] = array(
+    'title' => 'Identi.ca Moderation Queue',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'page callback' => 'insight_identica_posts',
+    'access callback' => 'user_access',
+    'access arguments' => array('post as fedora')
+  );
+  $items['identica/approved'] = array(
+    'title' => 'Identi.ca Approved Posts',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'insight_identica_approved_posts',
+    'access callback' => 'user_access',
+    'access arguments' => array('post as fedora')
+  );
+  $items['identica/rejected'] = array(
+    'title' => 'Identi.ca Rejected Posts',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'insight_identica_rejected_posts',
+    'access callback' => 'user_access',
+    'access arguments' => array('post as fedora')
+  );
+  return $items;
+}
+
+function insight_publish_identica_approval_form($form, &$form_state, $val) {
+  $form = array(
+    'insight_queue_ipid' => array(
+      '#type' => 'hidden',
+      '#value' => $val->ipid,
+    ),
+    'insight_queue_status' => array(
+      '#type' => 'item',
+      '#title' => $val->status,
+      '#description' => 'Submitted by ' . $val->requestedby . ' on ' . date("F j, Y, g:i a", $val->requestedat),
+    ),
+    'insight_queue_approve_button' => array(
+      '#type' => 'submit',
+      '#value' => t('Approve'),
+      '#submit' => array('insight_publish_approve_status'),
+    ),
+    'insight_queue_reject_button' => array(
+      '#type' => 'submit',
+      '#value' => t('Reject'),
+      '#submit' => array('insight_publish_reject_status'),
+    ),
+  );
+  return $form;
+}
+function insight_identica_requested_posts()
+{
+  $query = db_select('insight_feed', 'i')->condition('published', 0)->orderBy('requestedat', 'desc');
+  $intermediate = $query->fields('i');
+  $maxCount = $intermediate->countQuery()->execute()->fetchField();
+
+  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+
+  $page = pager_default_initialize($maxCount, $num_per_page);
+
+  $offset = $num_per_page * $page;
+
+  $value = $query->range($offset, $num_per_page)->execute();
+
+  foreach ($value as $val) {    
+    $items[] = array(
+    'data' => drupal_render(drupal_get_form('insight_publish_identica_approval_form', $val)),
+    );
+  }
+
+  if(!isset($items))
+    return '';
+
+  $output = theme('item_list', array('items' => $items));
+  $output .= theme('pager');
+  return $output;
+}
+
+function insight_publish_approve_status($form, &$form_state) {
+  if(isset($form_state['values']['insight_queue_ipid']))
+    insight_publish_post_Identica($form_state['values']['insight_queue_ipid']);
+}
+
+function insight_publish_reject_status($form, &$form_state) {
+  if(isset($form_state['values']['insight_queue_ipid']))
+    insight_publish_reject_Identica($form_state['values']['insight_queue_ipid']);
+}
+
+function insight_identica_approved_posts() {
+  $query = db_select('insight_feed', 'i')->condition('published', 1)->orderBy('moderatedat', 'desc');
+  $intermediate = $query->fields('i');
+  
+  $maxCount = $intermediate->countQuery()->execute()->fetchField();
+
+  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+
+  $page = pager_default_initialize($maxCount, $num_per_page);
+
+  $offset = $num_per_page * $page;
+
+  $value = $query->range($offset, $num_per_page)->execute();
+
+  foreach ($value as $val) {
+    $form = array(
+      'insight_queue_ipid' => array(
+        '#type' => 'hidden',
+        '#value' => $val->ipid,
+      ),
+      'insight_queue_status' => array(
+        '#type' => 'item',
+        '#title' => $val->status,
+        '#description' => 'Aprroved by ' . $val->moderatedby . ' on ' . date("F j, Y, g:i a", $val->moderatedat),
+      ),
+    );
+    $items[] = array(
+    'data' => drupal_render($form),
+    );
+  }
+  
+  if(!isset($items))
+    return '';
+
+  $output = theme('item_list', array('items' => $items));
+  $output .= theme('pager');
+  return $output;
+}
+
+function insight_identica_rejected_posts() {
+  $query = db_select('insight_feed', 'i')->condition('published', 2)->orderBy('moderatedat', 'desc');
+  $intermediate = $query->fields('i');
+  
+  $maxCount = $intermediate->countQuery()->execute()->fetchField();
+
+  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+
+  $page = pager_default_initialize($maxCount, $num_per_page);
+
+  $offset = $num_per_page * $page;
+
+  $value = $query->range($offset, $num_per_page)->execute();
+
+  foreach ($value as $val) {
+    $form = array(
+      'insight_queue_ipid' => array(
+        '#type' => 'hidden',
+        '#value' => $val->ipid,
+      ),
+      'insight_queue_status' => array(
+        '#type' => 'item',
+        '#title' => $val->status,
+        '#description' => 'Rejected by ' . $val->moderatedby . ' on ' . date("F j, Y, g:i a", $val->moderatedat),
+      ),
+    );
+    $items[] = array(
+    'data' => drupal_render($form),
+    );
+  }
+  if(!isset($items))
+    return '';
+
+  $output = theme('item_list', array('items' => $items));
+  $output .= theme('pager');
+  return $output;
+}
+
+/*
+ * Function to specify where to show
+ * publish box
+ */
+function insight_publish_apt_place_to_post() {
+  if(drupal_is_front_page())
+    return TRUE;
+  return FALSE;
+}
+
+/**
+ * Implements hook_theme_registry_alter()
+**/
+function insight_publish_theme_registry_alter(&$theme_registry) {
+  $mod_path = drupal_get_path('module', 'insight_publish') . '/theme';
+  $theme_registry_copy = $theme_registry;       // munge on a copy
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path);
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  $hooks = array('node', 'comment');
+  foreach ($hooks as $h) {
+    _insight_publish_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path);
+  }
+}
+
+/**
+ * Helper function for re-ordering arrays (needed by theme_registry_alter)
+*/
+function _insight_publish_insert_after_first_element(&$a, $element) {
+  if(is_array($a)) {
+    $first_element = array_shift($a);
+    array_unshift($a, $first_element, $element);
+  }
+}
+
+/**
+  *Implements hook_block_info
+  */
+function insight_publish_block_info() {
+  $blocks = array(
+    'status_box' => array(
+      'info' => 'Insight Publish Block',
+    )
+  );
+  return $blocks;
+}
+
+/**
+ *Implements hook_block_view
+ *
+ * @param $delta
+ * The name of the block to b returned
+ */
+function insight_publish_block_view($delta = '') {
+  $block = array(
+    'subject' => '',
+    'content' => '',
+  );
+  if ($delta == 'status_box') {
+    if (user_access('create insight_microblog content') && insight_publish_apt_place_to_post()) {
+      //$block['subject'] = t('Publish');
+      drupal_add_library('system', 'ui.dialog');
+      $block['content']['form'] = drupal_get_form('insight_publish_form');
+    }
+  }
+  return $block;
+}
+
+/*
+ * Publish form for creating microblog posts
+ */
+function insight_publish_form($form, &$form_state) {
+  $form = array(
+  'insight_publish_textfield' => array(
+    '#type' => 'textarea',
+    '#rows' => 5,
+    '#columns' => 30,
+    '#required' => TRUE,
+    ),
+  'insight_publish_twitter' => array(
+    '#type' => 'checkbox',
+    '#title' => 'Set Identi.ca/Twitter Status',
+    ),
+  'insight_publish_characters' => array(
+    '#type' => 'item',
+    '#title' => '140 characters left',
+    ),
+  'insight_publish_submit' => array(
+    '#type' => 'submit',
+    '#value' => 'POST',
+    '#attributes' => array('onclick' => 'return confirmPost();'),
+    ),
+   );
+  $form['#attached']['js'] = array(
+    drupal_get_path('module', 'insight_publish') . '/js/status.js',
+  );
+  return $form;  
+}
+/**
+ * Implement form_id_form_validate()
+ */
+function insight_publish_form_validate($form, &$form_state) {
+  if($form_state['values']['insight_publish_twitter'] == 1) {
+    if(strlen($form_state['values']['insight_publish_textfield']) > 140)
+      form_set_error('insight_publish_textfield', t('Upto 140 characters allowed in Twitter Feeds'));
+      return;
+  }
+}
+/**
+ * Implement form_id_form_submit()
+ */
+function insight_publish_form_submit($form, &$form_state) {
+  global $user;
+  $body = $form_state['values']['insight_publish_textfield'];
+  insight_publish_request_Identica($body, $user);
+  $pieces = explode(" ", $body, 5);
+  $title = implode(" ", array_splice($pieces, 0, 4));
+  if ($title != $body)
+    $title .= '...';
+  $node = new stdClass(); // We create a new node object
+  $node->type = 'insight_microblog'; // Content Type
+  $node->title = $title;
+  $node->language = LANGUAGE_NONE; // Or any language code if Locale module is enabled.
+  $node->uid = $user->uid; // User ID
+  node_object_prepare($node); // Set some default values.
+  
+  //add tags
+  $terms = get_tags_with_tid($body);
+  foreach($terms as $tid)
+    $node->field_tags[$node->language][]['tid'] = $tid;
+        
+  //body field with link tags
+  $node->body[$node->language][0]['value'] = hashtags_node_transform_to_links($body, $terms);
+  $node->body[$node->language][0]['summary'] = text_summary($node->body[$node->language][0]['value'], 'filtered_html', 200);
+  $node->body[$node->language][0]['format'] = 'filtered_html';
+  
+  //submit node
+  $node = node_submit($node); // Prepare node for a submit
+  $nid = node_save($node); // After this call we'll get a nid
+}
+
+
+/*
+ * Helper function that identifies unique taxonomy terms from the input text to be converted into links
+ * 
+ * @param $text The input text
+ *
+ * @return An associative array of the form 'term' => 'tid'
+ */
+function get_tags_with_tid($text) {
+  $hashtags = get_hashtags_from_text($text);
+  $tid = array();
+  foreach($hashtags as $term){
+    $tid[$term] = get_tid_from_name($term);
+  }
+  return $tid;
+}
+
+
+/*
+ * Create and return array of hashtag words (#some_word) omitting the #
+ */
+function get_hashtags_from_text($text) {
+  $tags_list = array();
+  $tag_list = array();
+  $pattern = "/#[0-9A-Za-z_]+/";
+  $result = array();
+  preg_match_all($pattern, $text, $tags_list);   
+  if (!empty($tags_list)) {
+    foreach($tags_list[0] as $tag)
+      $tag_list[] = substr($tag,1);
+    $result = array_unique($tag_list);
+  }
+  return $result;
+}
+
+
+/**
+ * Helper function to dynamically get the tid from the term_name
+ *
+ * @param $term_name Term name
+ *
+ * @return Term id of the found term or else inserts the id and returns its TID
+ */  
+function get_tid_from_name($term_name) {
+  $result = taxonomy_get_term_by_name_and_vocabulary($term_name, VOCABULARY_ID);
+  if (!empty($result))
+    return key($result);
+  else  return insert_tag($term_name);
+}
+
+/**
+ * Gets the terms by name and vocabulary
+ *
+ * @param $name Term name
+ * @param $vid Vocabulary ID
+ *
+ * @return Term id of the found term or else inserts the id and returns its TID
+ */
+function taxonomy_get_term_by_name_and_vocabulary($name, $vid) {
+  return taxonomy_term_load_multiple(array(), array('name' => trim($name), 'vid' => $vid));
+}
+
+
+/**
+ *Function which takes in a term and returns its termid(tid).
+ *Returns -1 if not found 
+ */
+function insert_tag($term_name) {
+  $edit = array(
+          'name' => t($term_name),
+          'description' => '',
+          'parent' => array(0),
+          'vid' => VOCABULARY_ID,
+        );
+  $term = (object) $edit;
+  taxonomy_term_save($term);
+  $tt = taxonomy_get_term_by_name($term_name);
+  return key($tt);
+}
+
+
+/*
+ * Find each hashtag word (#some_word) and turn it into the link
+ * (<a href="taxonomy/term/$tid">#some_word</a>). 
+ * $tid are taken from $terms array. 
+ */
+function hashtags_node_transform_to_links($text, $terms) {       
+  foreach ($terms as $word => $tid) {
+    if (strstr($text, $word)) {    
+      $word = '#' . $word;
+      //$link = '<a class="link_tags" href="taxonomy/term/{$tid}">#'.$word.'</a>';
+      $link = l($word, "taxonomy/term/".$tid, array('attributes' => array('class' => 'hashtag')));
+      $pattern = "/$word\b/";      
+      $text = preg_replace($pattern, $link, $text);      
+    }
+  }  
+  return $text;
+}
+
+/**
+ * Insert Post to Identi.ca requests in the moderation queue
+ * If the user is has permission to post to Fedora's Identi.ca
+ * feed, the post is simultaneously posted too
+ *
+ * @param $text The status message
+ * @param $user User object
+ *
+ * @return IPID of the request
+ */
+function insight_publish_request_Identica($text, $user) {
+  if (!$user)
+    global $user;
+  if (strlen($text) > 140) {
+    drupal_set_message("Identi.ca/Twitter Statuses cannot be more than 140 characters in length", "error");
+    return NULL;
+  }
+  $result = db_insert('insight_feed')
+    ->fields(array(
+      'status' => $text,
+      'requestedBy' => $user->name,
+      'requestedAt' => REQUEST_TIME,
+      'published' => 0,
+    ))
+    ->execute();
+  watchdog('insight_module', 'New post to Twitter/Identi.ca request created. IPID: %var', array('%var' => $result)); 
+  if(!$result) {
+    drupal_set_message("Message could not be posted", "error");
+    return NULL;
+  }  
+  drupal_set_message("Message added to moderation queue");
+  if (user_access('post as fedora')) {
+    insight_publish_post_Identica($result);
+  }
+  return $result;
+}
+
+/**
+ * Post to Identi.ca
+ * if the user is has permission to post to Fedora's Identi.ca
+ * 
+ * @param $ipid The status message request ID
+ *
+ * @return TRUE if successfully added
+ */
+function insight_publish_post_Identica($ipid) {
+  global $user;
+  if (!user_access('post as fedora'))
+    return FALSE;
+  $result = db_select('insight_feed', 'i')
+    ->fields('i')
+    ->condition('ipid', $ipid)
+    ->execute();
+  foreach ($result as $r) {
+    /* Placeholder for posting to Identi.ca as admin 
+    $res = callToFunction($r->status) */
+    $res = TRUE;
+    if($res) {
+      db_update('insight_feed')
+      ->fields(array(
+      'published' => 1,
+      'moderatedBy' => $user->name,
+      'moderatedAt' => REQUEST_TIME,
+      ))
+      ->condition('ipid', $r->ipid, '=')
+      ->execute();
+      drupal_set_message("Message Successfully posted to Twitter");
+    }
+    else
+      drupal_set_message("Message could not posted to Twitter", "error");
+  return $res;
+  }
+  return FALSE;
+}
+
+/**
+ * Reject request to post status to Fedora's Identi.ca feed
+ * if the user is has permission to post to Fedora's Identi.ca
+ * 
+ * @param $ipid The status message request ID
+ *
+ * @return TRUE if successful
+ */
+function insight_publish_reject_Identica($ipid) {
+  global $user;
+  if (!user_access('post as fedora'))
+    return FALSE;
+  $result = db_update('insight_feed')
+      ->fields(array(
+      'published' => 2,
+      'moderatedBy' => $user->name,
+      'moderatedAt' => REQUEST_TIME,
+      ))
+      ->condition('ipid', $ipid, '=')
+      ->execute();
+  if($result) {
+    drupal_set_message("Message removed from moderation queue");
+    return TRUE;
+  }
+  return FALSE;
+}
