@@ -1,6 +1,6 @@
 This module is being developed as an Google Summer of Code '12 Project
 for Fedora Insight.
-Use Cases: //fedoraproject.org/wiki/Insight_use_cases_for_status_and_microblogging
+Use Cases: http://fedoraproject.org/wiki/Insight_use_cases_for_status_and_microblogging
 
 The module specifies a block 'Insight Publish' to enable users to post authenticated
 status messages on Insight Website and also promote them to be added to Fedora's feed
