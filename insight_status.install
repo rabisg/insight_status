@@ -1,14 +1,14 @@
 <?php
 /**
  * @file
- * Database schema for insight_publish
- * Install, update, and uninstall functions for the insight_publish module.
+ * Database schema for insight_status
+ * Install, update, and uninstall functions for the insight_status module.
  */
 
 /**
  *Implements hook_schema()
  */
-function insight_publish_schema() {
+function insight_status_schema() {
   $schema['insight_feed'] = array(
     'description' => "Storage for Insight Identi.ca feeds",
     'fields' => array(
@@ -65,14 +65,14 @@ function insight_publish_schema() {
 /**
  * Implements hook_install()
  */
-function insight_publish_install() {
-  variable_set('insight_publish_num_per_page', 50);
+function insight_status_install() {
+  variable_set('insight_status_num_per_page', 50);
 }
 
 /**
  * Implements hook_uninstall()
  */
-function insight_publish_uninstall() {
-  variable_del('insight_publish_num_per_page');
+function insight_status_uninstall() {
+  variable_del('insight_status_num_per_page');
 }
 

@@ -4,7 +4,7 @@
  * Code for the Insight Publish feature.
  */
 
-include_once 'insight_publish.features.inc';
+include_once 'insight_status.features.inc';
 define('CAN_PUBLISH_CONTENT', 1);
 
 //defines Vocabulary ID for tags vocabulary
@@ -13,7 +13,7 @@ define('VOCABULARY_ID', 1);
 /**
  * Implementation of hook_permission() . 
  */
-function insight_publish_permission() {
+function insight_status_permission() {
   return array(
     'post as fedora' => array(
       'title' => t('Administration permission for Moderation Queue'), 
@@ -25,7 +25,7 @@ function insight_publish_permission() {
 /**
   *Implements hook_menu
   */
-function insight_publish_menu() {
+function insight_status_menu() {
   $items['identica'] = array(
     'title' => 'Identi.ca Posts',
     'type' => MENU_NORMAL_ITEM,
@@ -60,7 +60,7 @@ function insight_publish_menu() {
 /**
  * Form builder for approving/rejecting Identi.ca requests
  */
-function insight_publish_identica_approval_form($form, &$form_state, $val) {
+function insight_status_identica_approval_form($form, &$form_state, $val) {
   $form = array(
     'insight_queue_ipid' => array(
       '#type' => 'hidden',
@@ -74,12 +74,12 @@ function insight_publish_identica_approval_form($form, &$form_state, $val) {
     'insight_queue_approve_button' => array(
       '#type' => 'submit',
       '#value' => t('Approve'),
-      '#submit' => array('insight_publish_approve_status'),
+      '#submit' => array('insight_status_approve_status'),
     ),
     'insight_queue_reject_button' => array(
       '#type' => 'submit',
       '#value' => t('Reject'),
-      '#submit' => array('insight_publish_reject_status'),
+      '#submit' => array('insight_status_reject_status'),
     ),
   );
   return $form;
@@ -93,7 +93,7 @@ function insight_identica_requested_posts() {
   $intermediate = $query->fields('i');
   $maxCount = $intermediate->countQuery()->execute()->fetchField();
 
-  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+  $num_per_page = variable_get('insight_status_num_per_page', 50);
 
   $page = pager_default_initialize($maxCount, $num_per_page);
 
@@ -103,7 +103,7 @@ function insight_identica_requested_posts() {
 
   foreach ($value as $val) {    
     $items[] = array(
-    'data' => drupal_render(drupal_get_form('insight_publish_identica_approval_form', $val)),
+    'data' => drupal_render(drupal_get_form('insight_status_identica_approval_form', $val)),
     );
   }
 
@@ -115,14 +115,14 @@ function insight_identica_requested_posts() {
   return $output;
 }
 
-function insight_publish_approve_status($form, &$form_state) {
+function insight_status_approve_status($form, &$form_state) {
   if (isset($form_state['values']['insight_queue_ipid']))
-    insight_publish_post_Identica($form_state['values']['insight_queue_ipid']);
+    insight_status_post_Identica($form_state['values']['insight_queue_ipid']);
 }
 
-function insight_publish_reject_status($form, &$form_state) {
+function insight_status_reject_status($form, &$form_state) {
   if (isset($form_state['values']['insight_queue_ipid']))
-    insight_publish_reject_Identica($form_state['values']['insight_queue_ipid']);
+    insight_status_reject_Identica($form_state['values']['insight_queue_ipid']);
 }
 
 /**
@@ -134,7 +134,7 @@ function insight_identica_approved_posts() {
   
   $maxCount = $intermediate->countQuery()->execute()->fetchField();
 
-  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+  $num_per_page = variable_get('insight_status_num_per_page', 50);
 
   $page = pager_default_initialize($maxCount, $num_per_page);
 
@@ -176,7 +176,7 @@ function insight_identica_rejected_posts() {
   
   $maxCount = $intermediate->countQuery()->execute()->fetchField();
 
-  $num_per_page = variable_get('insight_publish_num_per_page', 50);
+  $num_per_page = variable_get('insight_status_num_per_page', 50);
 
   $page = pager_default_initialize($maxCount, $num_per_page);
 
@@ -214,7 +214,7 @@ function insight_identica_rejected_posts() {
  *
  * @return TRUE if block should be visible on this page
  */
-function insight_publish_apt_place_to_post() {
+function insight_status_apt_place_to_post() {
   if (drupal_is_front_page())
     return TRUE;
   return FALSE;
@@ -223,21 +223,21 @@ function insight_publish_apt_place_to_post() {
 /**
  * Implements hook_theme_registry_alter()
 **/
-function insight_publish_theme_registry_alter(&$theme_registry) {
-  $mod_path = drupal_get_path('module', 'insight_publish') . '/theme';
+function insight_status_theme_registry_alter(&$theme_registry) {
+  $mod_path = drupal_get_path('module', 'insight_status') . '/theme';
   $theme_registry_copy = $theme_registry;       // munge on a copy
   _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path);
   $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
   $hooks = array('node', 'comment');
   foreach ($hooks as $h) {
-    _insight_publish_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path);
+    _insight_status_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path);
   }
 }
 
 /**
  * Helper function for re-ordering arrays (needed by theme_registry_alter)
 */
-function _insight_publish_insert_after_first_element(&$a, $element) {
+function _insight_status_insert_after_first_element(&$a, $element) {
   if (is_array($a)) {
     $first_element = array_shift($a);
     array_unshift($a, $first_element, $element);
@@ -247,7 +247,7 @@ function _insight_publish_insert_after_first_element(&$a, $element) {
 /**
   *Implements hook_block_info
   */
-function insight_publish_block_info() {
+function insight_status_block_info() {
   $blocks = array(
     'status_box' => array(
       'info' => 'Insight Publish Block',
@@ -262,16 +262,16 @@ function insight_publish_block_info() {
  * @param $delta
  * The name of the block to b returned
  */
-function insight_publish_block_view($delta = '') {
+function insight_status_block_view($delta = '') {
   $block = array(
     'subject' => '',
     'content' => '',
   );
   if ($delta == 'status_box') {
-    if (user_access('create insight_microblog content') && insight_publish_apt_place_to_post()) {
+    if (user_access('create insight_microblog content') && insight_status_apt_place_to_post()) {
       //$block['subject'] = t('Publish');
       drupal_add_library('system', 'ui.dialog');
-      $block['content']['form'] = drupal_get_form('insight_publish_form');
+      $block['content']['form'] = drupal_get_form('insight_status_form');
     }
   }
   return $block;
@@ -280,51 +280,51 @@ function insight_publish_block_view($delta = '') {
 /*
  * Publish form for creating microblog posts
  */
-function insight_publish_form($form, &$form_state) {
+function insight_status_form($form, &$form_state) {
   $form = array(
-  'insight_publish_textfield' => array(
+  'insight_status_textfield' => array(
     '#type' => 'textarea',
     '#rows' => 5,
     '#columns' => 30,
     '#required' => TRUE,
     ),
-  'insight_publish_twitter' => array(
+  'insight_status_twitter' => array(
     '#type' => 'checkbox',
     '#title' => 'Set Identi.ca/Twitter Status',
     ),
-  'insight_publish_characters' => array(
+  'insight_status_characters' => array(
     '#type' => 'item',
     '#title' => '140 characters left',
     ),
-  'insight_publish_submit' => array(
+  'insight_status_submit' => array(
     '#type' => 'submit',
     '#value' => 'POST',
     '#attributes' => array('onclick' => 'return confirmPost();'),
     ),
    );
   $form['#attached']['js'] = array(
-    drupal_get_path('module', 'insight_publish') . '/js/status.js',
+    drupal_get_path('module', 'insight_status') . '/js/status.js',
   );
   return $form;  
 }
 /**
  * Implement form_id_form_validate()
  */
-function insight_publish_form_validate($form, &$form_state) {
-  if ($form_state['values']['insight_publish_twitter'] == 1) {
-    if (strlen($form_state['values']['insight_publish_textfield']) > 140)
-      form_set_error('insight_publish_textfield', t('Upto 140 characters allowed in Twitter Feeds'));
+function insight_status_form_validate($form, &$form_state) {
+  if ($form_state['values']['insight_status_twitter'] == 1) {
+    if (strlen($form_state['values']['insight_status_textfield']) > 140)
+      form_set_error('insight_status_textfield', t('Upto 140 characters allowed in Twitter Feeds'));
       return;
   }
 }
 /**
  * Implement form_id_form_submit()
  */
-function insight_publish_form_submit($form, &$form_state) {
+function insight_status_form_submit($form, &$form_state) {
   global $user;
-  $body = $form_state['values']['insight_publish_textfield'];
-  if ($form_state['values']['insight_publish_twitter'] == 1) {
-    insight_publish_request_Identica($body, $user);
+  $body = $form_state['values']['insight_status_textfield'];
+  if ($form_state['values']['insight_status_twitter'] == 1) {
+    insight_status_request_Identica($body, $user);
   }
   $pieces = explode(" ", $body, 5);
   $title = implode(" ", array_splice($pieces, 0, 4));
@@ -461,7 +461,7 @@ function hashtags_node_transform_to_links($text, $terms) {
  *
  * @return IPID of the request
  */
-function insight_publish_request_Identica($text, $user) {
+function insight_status_request_Identica($text, $user) {
   if (!$user)
     global $user;
   if (strlen($text) > 140) {
@@ -483,7 +483,7 @@ function insight_publish_request_Identica($text, $user) {
   }  
   drupal_set_message(t("Message added to moderation queue"));
   if (user_access('post as fedora')) {
-    insight_publish_post_Identica($result);
+    insight_status_post_Identica($result);
   }
   return $result;
 }
@@ -496,7 +496,7 @@ function insight_publish_request_Identica($text, $user) {
  *
  * @return TRUE if successfully added
  */
-function insight_publish_post_Identica($ipid) {
+function insight_status_post_Identica($ipid) {
   global $user;
   if (!user_access('post as fedora'))
     return FALSE;
@@ -534,7 +534,7 @@ function insight_publish_post_Identica($ipid) {
  *
  * @return TRUE if successful
  */
-function insight_publish_reject_Identica($ipid) {
+function insight_status_reject_Identica($ipid) {
   global $user;
   if (!user_access('post as fedora'))
     return FALSE;

@@ -8,8 +8,8 @@ at Identi.ca.
 Users with access permission 'Post as Fedora' can directly post it to Identi.ca while
 others can only add their message to the moderation queue to be approve or rejected by
 a user with aforementioned permission.
-N.B. This module only provides the backend for posting to an external service
-(integration is still under development)
+This module relies on other back-end module like identica to provide it the necessary
+tools for posting to Identica
 
 function insight_publish_apt_place_to_post()
 -specifies where the 'Insight Publish' box should be displayed

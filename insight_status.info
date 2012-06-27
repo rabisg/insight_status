@@ -1,5 +1,5 @@
 ;$Id$
-name = Insight Publish
+name = Insight Status
 description = Insight Microblogging and Status
 core = 7.x
 package = Content
@@ -12,11 +12,11 @@ dependencies[] = number
 dependencies[] = taxonomy
 dependencies[] = text
 features[features_api][] = api:1
-features[field][] = node-insight_microblog-body
-features[field][] = node-insight_microblog-field_tags
+features[field][] = node-insight_status-body
+features[field][] = node-insight_status-field_tags
 features[field][] = taxonomy_term-tags-field_num_posts
 features[field][] = taxonomy_term-tags-field_page_image
-features[node][] = insight_microblog
+features[node][] = insight_status
 features[taxonomy][] = tags
-stylesheets[all][] = css/insight_microblog-css.css
-stylesheets[all][] = css/insight_microblog-comments.css
+stylesheets[all][] = css/insight_status-css.css
+stylesheets[all][] = css/insight_status-comments.css
